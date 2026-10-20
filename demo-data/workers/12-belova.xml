@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Дарья Белова</name>
+  <coordinates><x>75</x><y>60</y></coordinates>
+  <startDate>2026-09-01</startDate>
+  <position>MANAGER</position>
+  <status>HIRED</status>
+  <organizationId>30</organizationId>
+</worker>

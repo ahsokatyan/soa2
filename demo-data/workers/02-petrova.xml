@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Анна Петрова</name>
+  <coordinates><x>15</x><y>25</y></coordinates>
+  <salary>120000</salary>
+  <startDate>2023-06-01</startDate>
+  <position>MANAGER</position>
+  <status>RECOMMENDED_FOR_PROMOTION</status>
+  <person><height>168</height><eyeColor>GREEN</eyeColor></person>
+  <organizationId>10</organizationId>
+</worker>

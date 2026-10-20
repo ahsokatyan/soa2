@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Павел Морозов</name>
+  <coordinates><x>50</x><y>35</y></coordinates>
+  <salary>90000</salary>
+  <startDate>2024-07-01</startDate>
+  <position>COOK</position>
+  <status>RECOMMENDED_FOR_PROMOTION</status>
+  <person><height>178</height><eyeColor>RED</eyeColor></person>
+  <organizationId>20</organizationId>
+</worker>

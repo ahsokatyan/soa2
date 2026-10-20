@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ru">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Работники · СОА ЛР2</title><link rel="icon" href="data:,"><link rel="stylesheet" href="/assets/style.css"><script src="/client-config.js" defer></script><script src="/assets/app.js" defer></script></head>
+<body>
+<header><div><span class="eyebrow">СОА · ЛАБОРАТОРНАЯ РАБОТА 2</span><h1>Работники и организации</h1><p>Управление коллекцией и кадровые операции</p></div><a href="/docs/index.html" target="_blank" rel="noopener">Swagger ↗</a></header>
+<main>
+  <!-- <aside class="connection">При первом запуске разрешите самоподписанный сертификат <a id="worker-certificate" target="_blank" rel="noopener">Worker-сервиса ↗</a>. <span id="connection-info"></span></aside> -->
+  <div id="notice" role="status" aria-live="polite" hidden></div>
+  <section class="card"><div class="section-title"><h2>Коллекция работников</h2><button id="refresh" type="button">Обновить</button></div>
+    <form id="query-form">
+      <details><summary>Фильтры по полям · точное совпадение, условие AND</summary><div id="filters" class="fields"></div></details>
+      <details><summary>Сортировка по нескольким полям</summary><div id="sorts"></div><button id="add-sort" class="secondary" type="button">Добавить правило</button><p class="muted">Приоритет правил — сверху вниз. Пустые значения идут последними.</p></details>
+      <div class="toolbar"><label>Страница<input id="page" name="page" type="number" min="1" max="2147483647" value="1" required></label><label>На странице<input id="size" name="size" type="number" min="1" max="100" value="20" required></label><button type="submit">Применить</button><button id="reset-query" class="secondary" type="button">Сбросить</button></div>
+    </form>
+    <div class="table-wrap"><table id="workers-table"><thead><tr id="worker-head"></tr></thead><tbody id="workers-body"></tbody></table></div>
+    <div class="pagination"><button id="previous" class="secondary" type="button">← Назад</button><span id="page-info"></span><button id="next" class="secondary" type="button">Далее →</button></div>
+  </section>
+  <div class="columns">
+    <section class="card"><h2 id="editor-title">Новый работник</h2><p class="muted">ID и дата создания назначаются сервером. Поля со звёздочкой обязательны.</p><form id="worker-form"><div id="editor-fields" class="fields"></div>
+      <label class="check"><input id="has-person" type="checkbox">Указать данные человека</label><fieldset id="person-fields" class="fields" disabled><legend>Человек</legend></fieldset>
+      <div id="field-errors" role="alert"></div><div class="toolbar"><button id="save-worker" type="submit">Создать</button><button id="cancel-edit" class="secondary" type="button">Очистить форму</button></div>
+    </form></section>
+    <div class="stack"><section class="card"><h2>Найти по ID</h2><form id="lookup-form" class="toolbar"><label>ID работника<input name="id" type="number" min="1" max="2147483647" required></label><button type="submit">Найти</button></form><div id="lookup-result"></div></section>
+    <section class="card"><h2>Статистика зарплат</h2><div class="toolbar"><button id="salary-sum" type="button">Сумма зарплат</button><button id="salary-unique" class="secondary" type="button">Уникальные зарплаты</button></div><form id="count-form" class="toolbar"><label>Зарплата меньше<input name="value" type="number" min="0" step="any" required></label><button type="submit">Посчитать</button></form><p id="salary-result" role="status">Выберите операцию.</p></section></div>
+  </div>
+  <div class="columns">
+    <section class="card"><h2>Перевод в другую организацию</h2><p class="muted">Зарплата и должность сохраняются.</p><form id="move-form"><div class="fields"><label>ID работника<input name="worker" type="number" min="1" max="2147483647" required></label><label>Из организации<input name="from" type="text" inputmode="numeric" pattern="[1-9][0-9]*" required></label><label>В организацию<input name="to" type="text" inputmode="numeric" pattern="[1-9][0-9]*" required></label></div><button type="submit">Перевести</button></form></section>
+    <section class="card"><h2>Индексация зарплат</h2><p class="muted">Все заданные зарплаты организации умножаются на коэффициент. При ошибке изменения отменяются.</p><form id="index-form"><div class="fields"><label>ID организации<input name="org" type="text" inputmode="numeric" pattern="[1-9][0-9]*" required></label><label>Коэффициент<input name="coeff" type="number" min="0" step="any" placeholder="1.1" required></label></div><button type="submit">Проиндексировать</button></form></section>
+  </div>
+  <!-- <footer>Начальные организации: 10, 20, 30.</footer> -->
+</main>
+</body></html>

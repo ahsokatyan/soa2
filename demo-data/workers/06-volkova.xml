@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Елена Волкова</name>
+  <coordinates><x>-200</x><y>-50</y></coordinates>
+  <salary>110000</salary>
+  <startDate>2023-04-17</startDate>
+  <position>MANAGER</position>
+  <status>REGULAR</status>
+  <person><height>170</height><eyeColor>GREEN</eyeColor></person>
+  <organizationId>20</organizationId>
+</worker>

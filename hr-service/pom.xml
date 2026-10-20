@@ -1,0 +1,9 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0"><modelVersion>4.0.0</modelVersion>
+  <parent><groupId>ru.itmo.soa</groupId><artifactId>soa-lab2</artifactId><version>1.0.0</version></parent><artifactId>hr-service</artifactId><packaging>war</packaging>
+  <dependencies>
+    <dependency><groupId>ru.itmo.soa</groupId><artifactId>common</artifactId><version>${project.version}</version></dependency>
+    <dependency><groupId>org.springframework</groupId><artifactId>spring-webmvc</artifactId><version>${spring.version}</version></dependency>
+    <dependency><groupId>jakarta.servlet</groupId><artifactId>jakarta.servlet-api</artifactId><version>6.0.0</version><scope>provided</scope></dependency>
+  </dependencies>
+  <build><finalName>ROOT</finalName><plugins><plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-war-plugin</artifactId><configuration><webResources><resource><directory>${project.basedir}/../</directory><targetPath>docs</targetPath><includes><include>openapi.yaml</include><include>internal-api.yaml</include><include>index.html</include></includes></resource></webResources></configuration></plugin></plugins></build>
+</project>

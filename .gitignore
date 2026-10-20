@@ -1,0 +1,9 @@
+.runtime/
+**/target/
+node_modules/
+*.log
+dist/
+README_for_prev_lab1.md
+.env
+.env.*
+docs/

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Сергей Новиков</name>
+  <coordinates><x>60</x><y>45</y></coordinates>
+  <salary>200000</salary>
+  <startDate>2020-01-20</startDate>
+  <position>DIRECTOR</position>
+  <status>REGULAR</status>
+  <person><height>190</height><eyeColor>BROWN</eyeColor></person>
+  <organizationId>30</organizationId>
+</worker>

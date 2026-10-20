@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Андрей Орлов</name>
+  <coordinates><x>70</x><y>55</y></coordinates>
+  <salary>75000</salary>
+  <startDate>2024-12-02</startDate>
+  <position>COOK</position>
+  <status>REGULAR</status>
+  <person><height>180</height><eyeColor>YELLOW</eyeColor></person>
+  <organizationId>30</organizationId>
+</worker>

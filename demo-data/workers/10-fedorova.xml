@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Наталья Фёдорова</name>
+  <coordinates><x>65</x><y>50</y></coordinates>
+  <salary>120000</salary>
+  <startDate>2023-08-21</startDate>
+  <position>MANAGER</position>
+  <status>RECOMMENDED_FOR_PROMOTION</status>
+  <person><height>165</height><eyeColor>GREEN</eyeColor></person>
+  <organizationId>30</organizationId>
+</worker>

@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: Worker internal transaction API
+  version: 1.0.0
+  description: Служебные операции для HR; публичный контракт находится в openapi.yaml.
+servers:
+  - url: https://localhost:8443/workers/api
+security:
+  - InternalToken: []
+paths:
+  /internal/move/{worker}/{from}/{to}:
+    post:
+      summary: Атомарно проверить исходную организацию и перевести работника
+      parameters:
+        - {name: worker, in: path, required: true, schema: {type: integer, format: int32, minimum: 1}}
+        - {name: from, in: path, required: true, schema: {type: integer, format: int64, minimum: 1}}
+        - {name: to, in: path, required: true, schema: {type: integer, format: int64, minimum: 1}}
+      responses:
+        '200':
+          description: Работник переведён; остальные поля сохранены
+          content:
+            application/xml:
+              schema: {$ref: './openapi.yaml#/components/schemas/Worker'}
+        '400': {$ref: './openapi.yaml#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: './openapi.yaml#/components/responses/NotFound'}
+        '409': {$ref: './openapi.yaml#/components/responses/Conflict'}
+        default: {$ref: './openapi.yaml#/components/responses/UnexpectedError'}
+  /internal/index/{org}/{coeff}:
+    post:
+      summary: Умножить заданные зарплаты организации на коэффициент в одной транзакции
+      parameters:
+        - {name: org, in: path, required: true, schema: {type: integer, format: int64, minimum: 1}}
+        - {name: coeff, in: path, required: true, schema: {type: number, format: double, minimum: 0, exclusiveMinimum: true}}
+      responses:
+        '200':
+          description: Число обновлённых работников; при ошибке ни один работник не изменяется
+          content:
+            application/xml:
+              schema: {$ref: './openapi.yaml#/components/schemas/IndexResult'}
+        '400': {$ref: './openapi.yaml#/components/responses/BadRequest'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: './openapi.yaml#/components/responses/NotFound'}
+        '422': {$ref: './openapi.yaml#/components/responses/ValidationError'}
+        default: {$ref: './openapi.yaml#/components/responses/UnexpectedError'}
+components:
+  securitySchemes:
+    InternalToken: {type: apiKey, in: header, name: X-Internal-Token}
+  responses:
+    Forbidden:
+      description: Отсутствует или не совпадает служебный токен
+      content:
+        application/xml:
+          schema: {$ref: './openapi.yaml#/components/schemas/Error'}

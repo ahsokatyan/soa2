@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Алексей Соколов</name>
+  <coordinates><x>40</x><y>15</y></coordinates>
+  <salary>160000</salary>
+  <startDate>2021-11-08</startDate>
+  <position>DIRECTOR</position>
+  <status>REGULAR</status>
+  <person><height>185</height><eyeColor>BROWN</eyeColor></person>
+  <organizationId>20</organizationId>
+</worker>

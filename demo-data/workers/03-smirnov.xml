@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Дмитрий Смирнов</name>
+  <coordinates><x>-20</x><y>30</y></coordinates>
+  <salary>90000</salary>
+  <startDate>2024-02-12</startDate>
+  <position>COOK</position>
+  <status>REGULAR</status>
+  <person><height>176</height><eyeColor>YELLOW</eyeColor></person>
+  <organizationId>10</organizationId>
+</worker>

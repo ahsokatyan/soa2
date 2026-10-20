@@ -1,0 +1,1062 @@
+openapi: 3.0.3
+info:
+  title: Worker Collection and HR API
+  version: 1.0.0
+  description: |
+    Спецификация двух REST-сервисов: сервиса управления коллекцией Worker
+    и HR-сервиса, использующего первый сервис.
+
+    Для поддержки HR-операций модель Worker расширена обязательным полем
+    `organizationId`: в исходной Java-модели принадлежность сотрудника
+    организации отсутствует, хотя она необходима для `/hr/move` и `/hr/index`.
+
+    Все сложные объекты передаются как XML в теле запроса/ответа. Параметры
+    выбора операции, идентификаторы, фильтрация, сортировка и пагинация
+    передаются через URL. Поля `id` и `creationDate` создаются сервером.
+servers:
+  - url: https://localhost:8443/workers/api
+    description: Worker API (Payara, HTTPS)
+tags:
+  - name: Workers
+    description: Базовые операции с коллекцией работников
+  - name: Salary
+    description: Операции над зарплатами
+  - name: HR
+    description: Операции второго сервиса, вызывающего Worker API
+
+paths:
+  /workers:
+    get:
+      tags: [Workers]
+      summary: Получить работников
+      description: |
+        Возвращает страницу работников. Все фильтры необязательны и при
+        совместном использовании объединяются логическим AND. Несколько правил
+        сортировки задаются повторением параметра `sort`; правила применяются
+        слева направо.
+      operationId: listWorkers
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Size'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/IdFilter'
+        - $ref: '#/components/parameters/NameFilter'
+        - $ref: '#/components/parameters/CoordinateXFilter'
+        - $ref: '#/components/parameters/CoordinateYFilter'
+        - $ref: '#/components/parameters/CreationDateFilter'
+        - $ref: '#/components/parameters/SalaryFilter'
+        - $ref: '#/components/parameters/StartDateFilter'
+        - $ref: '#/components/parameters/PositionFilter'
+        - $ref: '#/components/parameters/StatusFilter'
+        - $ref: '#/components/parameters/PersonHeightFilter'
+        - $ref: '#/components/parameters/EyeColorFilter'
+        - $ref: '#/components/parameters/OrganizationIdFilter'
+      responses:
+        '200':
+          description: Страница работников успешно получена
+          headers:
+            X-Total-Count:
+              description: Общее число объектов, подходящих под фильтры
+              schema: { type: integer, format: int64, minimum: 0 }
+            X-Total-Pages:
+              description: Общее число страниц
+              schema: { type: integer, minimum: 0 }
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/WorkerPage'
+        '400':
+          description: Некорректные параметры фильтрации, сортировки или пагинации
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_WORKER_QUERY
+                message: Номер страницы должен быть не меньше 1, а размер страницы — от 1 до 100
+                path: /api/workers?page=0&size=200
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+    post:
+      tags: [Workers]
+      summary: Добавить работника
+      description: Создаёт работника. `id` и `creationDate` задаются сервисом и не принимаются от клиента.
+      operationId: createWorker
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/WorkerInput'
+      responses:
+        '201':
+          description: Работник создан
+          headers:
+            Location:
+              description: URL созданного работника
+              schema: { type: string, format: uri }
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          description: Передан некорректный XML работника
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: MALFORMED_WORKER_XML
+                message: Не удалось разобрать XML с данными нового работника
+                path: /api/workers
+                timestamp: '2026-09-09T12:00:00Z'
+        '404':
+          description: Указанная организация не найдена
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/NotFoundError' }
+              example:
+                status: 404
+                code: ORGANIZATION_NOT_FOUND
+                message: Организация с идентификатором 999 не найдена
+                path: /api/workers
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          description: Новый работник конфликтует с текущим состоянием коллекции
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ConflictError' }
+              example:
+                status: 409
+                code: WORKER_CREATION_CONFLICT
+                message: Работник не может быть добавлен в указанную организацию
+                path: /api/workers
+                timestamp: '2026-09-09T12:00:00Z'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: Поля нового работника нарушают ограничения модели
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+              example:
+                status: 422
+                code: WORKER_VALIDATION_ERROR
+                message: Новый работник содержит недопустимые значения полей
+                path: /api/workers
+                timestamp: '2026-09-09T12:00:00Z'
+                violations:
+                  - field: salary
+                    message: должно быть больше 0
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+  /workers/{worker-id}:
+    parameters:
+      - $ref: '#/components/parameters/WorkerId'
+    get:
+      tags: [Workers]
+      summary: Получить работника по идентификатору
+      description: Возвращает один объект Worker с указанным идентификатором.
+      operationId: getWorker
+      responses:
+        '200':
+          description: Работник найден
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          description: Идентификатор работника имеет неверный формат
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_WORKER_ID
+                message: worker-id должен быть положительным целым числом
+                path: /api/workers/incorrect-id
+                timestamp: '2026-09-09T12:00:00Z'
+        '404':
+          description: Работник с указанным идентификатором не найден
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/NotFoundError' }
+              example:
+                status: 404
+                code: WORKER_NOT_FOUND
+                message: Работник с идентификатором 999 не найден
+                path: /api/workers/999
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+    put:
+      tags: [Workers]
+      summary: Полностью обновить работника
+      description: Заменяет изменяемые поля работника. `id` и `creationDate` сохраняются.
+      operationId: updateWorker
+      requestBody:
+        required: true
+        content:
+          application/xml:
+            schema:
+              $ref: '#/components/schemas/WorkerInput'
+      responses:
+        '200':
+          description: Работник обновлён
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          description: Идентификатор или XML обновляемого работника некорректен
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_WORKER_UPDATE
+                message: Не удалось разобрать XML с обновлёнными данными работника
+                path: /api/workers/15
+                timestamp: '2026-09-09T12:00:00Z'
+        '404':
+          description: Обновляемый работник или указанная организация не найдены
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/NotFoundError' }
+              example:
+                status: 404
+                code: WORKER_NOT_FOUND
+                message: Невозможно обновить работника 999 — работник не найден
+                path: /api/workers/999
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          description: Обновление конфликтует с текущим состоянием работника
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ConflictError' }
+              example:
+                status: 409
+                code: WORKER_UPDATE_CONFLICT
+                message: Работник был изменён другим запросом
+                path: /api/workers/15
+                timestamp: '2026-09-09T12:00:00Z'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaType'
+        '422':
+          description: Обновлённые поля работника нарушают ограничения модели
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+              example:
+                status: 422
+                code: WORKER_UPDATE_VALIDATION_ERROR
+                message: Обновлённые данные работника содержат недопустимые значения
+                path: /api/workers/15
+                timestamp: '2026-09-09T12:00:00Z'
+                violations:
+                  - field: person.height
+                    message: должно быть больше 0
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+    delete:
+      tags: [Workers]
+      summary: Удалить работника
+      description: Удаляет Worker с указанным идентификатором.
+      operationId: deleteWorker
+      responses:
+        '204':
+          description: Работник удалён; тело ответа отсутствует
+        '400':
+          description: Идентификатор удаляемого работника имеет неверный формат
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_WORKER_ID
+                message: worker-id должен быть положительным целым числом
+                path: /api/workers/incorrect-id
+                timestamp: '2026-09-09T12:00:00Z'
+        '404':
+          description: Удаляемый работник не найден
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/NotFoundError' }
+              example:
+                status: 404
+                code: WORKER_NOT_FOUND
+                message: Невозможно удалить работника 999 — работник не найден
+                path: /api/workers/999
+                timestamp: '2026-09-09T12:00:00Z'
+        '409':
+          description: Текущее состояние работника не позволяет удалить его
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ConflictError' }
+              example:
+                status: 409
+                code: WORKER_DELETION_CONFLICT
+                message: Работник не может быть удалён во время выполнения HR-операции
+                path: /api/workers/15
+                timestamp: '2026-09-09T12:00:00Z'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+  /workers/salary/sum:
+    get:
+      tags: [Salary]
+      summary: Рассчитать сумму зарплат
+      description: Возвращает сумму всех ненулевых значений salary. Для пустого набора возвращается 0.
+      operationId: sumSalaries
+      responses:
+        '200':
+          description: Сумма рассчитана
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/SalarySum'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+  /workers/salary/count-less-than:
+    get:
+      tags: [Salary]
+      summary: Посчитать работников с зарплатой меньше заданной
+      description: Работники с отсутствующим salary в результат не включаются.
+      operationId: countWorkersWithSalaryLessThan
+      parameters:
+        - name: value
+          in: query
+          required: true
+          description: Верхняя граница зарплаты, не включаемая в выборку
+          schema:
+            type: number
+            format: float
+            exclusiveMinimum: true
+            minimum: 0
+          example: 50000
+      responses:
+        '200':
+          description: Количество рассчитано
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/WorkerCount'
+        '400':
+          description: Порог зарплаты отсутствует или имеет неверный формат
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_SALARY_THRESHOLD
+                message: Параметр value должен быть числом больше 0
+                path: /api/workers/salary/count-less-than?value=-1
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+  /workers/salary/unique:
+    get:
+      tags: [Salary]
+      summary: Получить уникальные зарплаты
+      description: Возвращает различные ненулевые значения salary в возрастающем порядке.
+      operationId: getUniqueSalaries
+      responses:
+        '200':
+          description: Уникальные зарплаты получены
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/SalaryList'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+  /hr/move/{worker-id}/{id-from}/{id-to}:
+    servers:
+      - url: https://localhost:8444/api
+        description: HR API (Tomcat, HTTPS)
+    post:
+      tags: [HR]
+      summary: Переместить сотрудника между организациями
+      description: |
+        Второй сервис проверяет, что сотрудник относится к `id-from`, затем
+        меняет его `organizationId` на `id-to`. Должность и зарплата сохраняются.
+      operationId: moveWorker
+      parameters:
+        - $ref: '#/components/parameters/WorkerId'
+        - name: id-from
+          in: path
+          required: true
+          description: Идентификатор исходной организации
+          schema: { type: integer, format: int64, minimum: 1 }
+        - name: id-to
+          in: path
+          required: true
+          description: Идентификатор целевой организации
+          schema: { type: integer, format: int64, minimum: 1 }
+      responses:
+        '200':
+          description: Сотрудник перемещён
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/Worker'
+        '400':
+          description: Один из идентификаторов перемещения имеет неверный формат
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_MOVE_PARAMETERS
+                message: worker-id, id-from и id-to должны быть положительными целыми числами
+                path: /api/hr/move/15/0/20
+                timestamp: '2026-09-09T12:00:00Z'
+        '404':
+          description: Работник, исходная или целевая организация не найдены
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/NotFoundError' }
+              example:
+                status: 404
+                code: MOVE_RESOURCE_NOT_FOUND
+                message: Целевая организация с идентификатором 999 не найдена
+                path: /api/hr/move/15/10/999
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '409':
+          description: Сотрудник не принадлежит исходной организации либо организации совпадают
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ConflictError' }
+              example:
+                status: 409
+                code: ORGANIZATION_MOVE_CONFLICT
+                message: Работник 15 не относится к исходной организации 10
+                path: /api/hr/move/15/10/20
+                timestamp: '2026-09-09T12:00:00Z'
+        '422':
+          description: Перемещение нарушает ограничения данных работника
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+              example:
+                status: 422
+                code: MOVE_VALIDATION_ERROR
+                message: Работник не может быть перемещён в целевую организацию
+                path: /api/hr/move/15/10/20
+                timestamp: '2026-09-09T12:00:00Z'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: HR-сервис не смог выполнить перемещение через Worker-сервис
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/UpstreamServiceError' }
+              example:
+                status: 502
+                code: WORKER_SERVICE_MOVE_FAILED
+                message: Worker-сервис не выполнил перемещение работника
+                path: /api/hr/move/15/10/20
+                timestamp: '2026-09-09T12:00:00Z'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+  /hr/index/all/{org-id}/{coeff}:
+    servers:
+      - url: https://localhost:8444/api
+        description: HR API (Tomcat, HTTPS)
+    post:
+      tags: [HR]
+      summary: Проиндексировать зарплаты организации
+      description: |
+        Умножает каждую заданную зарплату работников организации на `coeff`.
+        Отсутствующие (`null`) зарплаты не изменяются. Операция выполняется
+        атомарно: при ошибке ни один Worker не изменяется.
+      operationId: indexOrganizationSalaries
+      parameters:
+        - name: org-id
+          in: path
+          required: true
+          description: Идентификатор организации
+          schema: { type: integer, format: int64, minimum: 1 }
+        - name: coeff
+          in: path
+          required: true
+          description: Положительный коэффициент индексации
+          schema:
+            type: number
+            format: double
+            minimum: 0
+            exclusiveMinimum: true
+          example: 1.1
+      responses:
+        '200':
+          description: Индексация выполнена
+          content:
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/IndexResult'
+        '400':
+          description: Идентификатор организации или коэффициент имеет неверный формат
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/BadRequestError' }
+              example:
+                status: 400
+                code: INVALID_INDEX_PARAMETERS
+                message: org-id и coeff должны быть положительными числами
+                path: /api/hr/index/all/10/0
+                timestamp: '2026-09-09T12:00:00Z'
+        '404':
+          description: Организация, для которой выполняется индексация, не найдена
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/NotFoundError' }
+              example:
+                status: 404
+                code: ORGANIZATION_NOT_FOUND
+                message: Организация с идентификатором 999 не найдена
+                path: /api/hr/index/all/999/1.1
+                timestamp: '2026-09-09T12:00:00Z'
+        '406':
+          $ref: '#/components/responses/NotAcceptable'
+        '422':
+          description: Результат индексации нарушает ограничения зарплаты
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+              example:
+                status: 422
+                code: SALARY_INDEX_VALIDATION_ERROR
+                message: После индексации одна или несколько зарплат выходят за допустимые границы
+                path: /api/hr/index/all/10/1000000
+                timestamp: '2026-09-09T12:00:00Z'
+                violations:
+                  - field: salary
+                    message: результат индексации не может быть сохранён
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '502':
+          description: HR-сервис не смог выполнить индексацию через Worker-сервис
+          content:
+            application/xml:
+              schema: { $ref: '#/components/schemas/UpstreamServiceError' }
+              example:
+                status: 502
+                code: WORKER_SERVICE_INDEX_FAILED
+                message: Worker-сервис не выполнил обновление зарплат организации
+                path: /api/hr/index/all/10/1.1
+                timestamp: '2026-09-09T12:00:00Z'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
+        default:
+          $ref: '#/components/responses/UnexpectedError'
+
+components:
+  parameters:
+    WorkerId:
+      name: worker-id
+      in: path
+      required: true
+      description: Положительный идентификатор Worker
+      schema: { type: integer, format: int32, minimum: 1 }
+    Page:
+      name: page
+      in: query
+      description: Номер страницы, начиная с 1
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      description: Размер страницы
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    Sort:
+      name: sort
+      in: query
+      description: Правила вида `поле,направление`. Пример — `name,asc&sort=salary,desc`.
+      style: form
+      explode: true
+      schema:
+        type: array
+        items:
+          type: string
+          pattern: '^(id|name|coordinates\.x|coordinates\.y|creationDate|salary|startDate|position|status|person\.height|person\.eyeColor|organizationId),(asc|desc)$'
+      examples:
+        multiple:
+          value: ['name,asc', 'salary,desc']
+    IdFilter:
+      name: id
+      in: query
+      description: Точное значение id
+      schema: { type: integer, format: int32, minimum: 1 }
+    NameFilter:
+      name: name
+      in: query
+      description: Точное значение name
+      schema: { type: string, minLength: 1 }
+    CoordinateXFilter:
+      name: coordinates.x
+      in: query
+      description: Точное значение coordinates.x
+      schema: { type: integer, format: int64 }
+    CoordinateYFilter:
+      name: coordinates.y
+      in: query
+      description: Точное значение coordinates.y
+      schema: { type: integer, format: int32, minimum: -100 }
+    CreationDateFilter:
+      name: creationDate
+      in: query
+      description: Точная дата создания
+      schema: { type: string, format: date }
+    SalaryFilter:
+      name: salary
+      in: query
+      description: Точное ненулевое значение salary
+      schema: { type: number, format: float, minimum: 0, exclusiveMinimum: true }
+    StartDateFilter:
+      name: startDate
+      in: query
+      description: Точная дата начала работы
+      schema: { type: string, format: date }
+    PositionFilter:
+      name: position
+      in: query
+      description: Точное значение position
+      schema: { $ref: '#/components/schemas/Position' }
+    StatusFilter:
+      name: status
+      in: query
+      description: Точное значение status
+      schema: { $ref: '#/components/schemas/Status' }
+    PersonHeightFilter:
+      name: person.height
+      in: query
+      description: Точное значение person.height
+      schema: { type: number, format: double, minimum: 0, exclusiveMinimum: true }
+    EyeColorFilter:
+      name: person.eyeColor
+      in: query
+      description: Точное значение person.eyeColor
+      schema: { $ref: '#/components/schemas/Color' }
+    OrganizationIdFilter:
+      name: organizationId
+      in: query
+      description: Точный идентификатор организации
+      schema: { type: integer, format: int64, minimum: 1 }
+
+  schemas:
+    Worker:
+      type: object
+      xml: { name: worker }
+      required: [id, name, coordinates, creationDate, startDate, organizationId]
+      properties:
+        id:
+          type: integer
+          format: int32
+          minimum: 1
+          readOnly: true
+          description: Уникальный идентификатор, генерируемый сервером
+        name:
+          type: string
+          minLength: 1
+          example: Иван Петров
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        creationDate:
+          type: string
+          format: date
+          readOnly: true
+          description: Дата создания, генерируемая сервером
+        salary:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
+          example: 85000.5
+        startDate:
+          type: string
+          format: date
+          example: '2025-09-01'
+        position:
+          allOf:
+            - $ref: '#/components/schemas/Position'
+          nullable: true
+        status:
+          allOf:
+            - $ref: '#/components/schemas/Status'
+          nullable: true
+        person:
+          allOf:
+            - $ref: '#/components/schemas/Person'
+          nullable: true
+        organizationId:
+          type: integer
+          format: int64
+          minimum: 1
+          description: Идентификатор организации (расширение для HR-операций)
+          example: 10
+    WorkerInput:
+      type: object
+      xml: { name: worker }
+      required: [name, coordinates, startDate, organizationId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Иван Петров
+        coordinates:
+          $ref: '#/components/schemas/Coordinates'
+        salary:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0
+          exclusiveMinimum: true
+          example: 85000.5
+        startDate:
+          type: string
+          format: date
+          example: '2025-09-01'
+        position:
+          allOf: [{ $ref: '#/components/schemas/Position' }]
+          nullable: true
+        status:
+          allOf: [{ $ref: '#/components/schemas/Status' }]
+          nullable: true
+        person:
+          allOf: [{ $ref: '#/components/schemas/Person' }]
+          nullable: true
+        organizationId:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 10
+    Coordinates:
+      type: object
+      xml: { name: coordinates }
+      required: [x, y]
+      properties:
+        x:
+          type: integer
+          format: int64
+          example: 120
+        y:
+          type: integer
+          format: int32
+          minimum: -100
+          description: Значение строго больше -101
+          example: 42
+    Person:
+      type: object
+      xml: { name: person }
+      required: [height, eyeColor]
+      properties:
+        height:
+          type: number
+          format: double
+          minimum: 0
+          exclusiveMinimum: true
+          example: 180.5
+        eyeColor:
+          $ref: '#/components/schemas/Color'
+    Position:
+      type: string
+      enum: [DIRECTOR, MANAGER, COOK]
+    Status:
+      type: string
+      enum: [FIRED, HIRED, RECOMMENDED_FOR_PROMOTION, REGULAR]
+    Color:
+      type: string
+      enum: [GREEN, RED, YELLOW, BROWN]
+    WorkerPage:
+      type: object
+      xml: { name: workerPage }
+      required: [page, size, totalElements, totalPages, workers]
+      properties:
+        page: { type: integer, minimum: 1 }
+        size: { type: integer, minimum: 1 }
+        totalElements: { type: integer, format: int64, minimum: 0 }
+        totalPages: { type: integer, minimum: 0 }
+        workers:
+          type: array
+          xml: { name: workers, wrapped: true }
+          items:
+            allOf: [{ $ref: '#/components/schemas/Worker' }]
+            xml: { name: worker }
+    SalarySum:
+      type: object
+      xml: { name: salarySum }
+      required: [value]
+      properties:
+        value: { type: number, format: double, example: 240001.5 }
+    WorkerCount:
+      type: object
+      xml: { name: workerCount }
+      required: [value]
+      properties:
+        value: { type: integer, format: int64, minimum: 0, example: 7 }
+    SalaryList:
+      type: object
+      xml: { name: salaries }
+      required: [values]
+      properties:
+        values:
+          type: array
+          xml: { wrapped: false }
+          items:
+            type: number
+            format: float
+            minimum: 0
+            exclusiveMinimum: true
+            xml: { name: salary }
+    IndexResult:
+      type: object
+      xml: { name: indexResult }
+      required: [organizationId, updatedWorkers]
+      properties:
+        organizationId: { type: integer, format: int64, minimum: 1 }
+        updatedWorkers: { type: integer, minimum: 0 }
+    Error:
+      type: object
+      xml: { name: error }
+      required: [status, code, message]
+      properties:
+        status:
+          type: integer
+          description: HTTP-код ошибки
+        code:
+          type: string
+          description: Машиночитаемый код ошибки
+        message:
+          type: string
+          description: Понятное пользователю описание ошибки
+        path:
+          type: string
+          description: URL, при обработке которого возникла ошибка
+        timestamp: { type: string, format: date-time }
+        violations:
+          type: array
+          xml: { name: violations, wrapped: true }
+          items:
+            $ref: '#/components/schemas/Violation'
+    BadRequestError:
+      description: Ошибка формата или параметров запроса (HTTP 400)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    NotFoundError:
+      description: Запрошенный ресурс не найден (HTTP 404)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    ConflictError:
+      description: Конфликт текущего состояния ресурсов (HTTP 409)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    ValidationError:
+      description: Нарушение ограничений целостности данных (HTTP 422)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    InternalServerError:
+      description: Внутренняя ошибка сервиса (HTTP 500)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    UpstreamServiceError:
+      description: Ошибка при обращении к Worker-сервису (HTTP 502)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    NotAcceptableError:
+      description: Невозможно сформировать ответ в запрошенном формате (HTTP 406)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    UnsupportedMediaTypeError:
+      description: Неподдерживаемый формат тела запроса (HTTP 415)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    ServiceUnavailableError:
+      description: Сервис временно недоступен (HTTP 503)
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    UnexpectedError:
+      description: Непредвиденная ошибка с иным HTTP-кодом
+      allOf:
+        - $ref: '#/components/schemas/Error'
+    Violation:
+      type: object
+      xml: { name: violation }
+      required: [field, message]
+      properties:
+        field: { type: string, example: salary }
+        message: { type: string, example: должно быть больше 0 }
+
+  responses:
+    BadRequest:
+      description: Некорректный URL-параметр, XML или синтаксис запроса
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/BadRequestError' }
+          example:
+            status: 400
+            code: BAD_REQUEST
+            message: Параметр worker-id должен быть положительным целым числом
+            path: /api/workers/incorrect-id
+            timestamp: '2026-09-09T12:00:00Z'
+    NotFound:
+      description: Запрошенный ресурс не найден
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/NotFoundError' }
+          example:
+            status: 404
+            code: RESOURCE_NOT_FOUND
+            message: Запрошенный ресурс не найдены
+            path: /api/workers/999
+            timestamp: '2026-09-09T12:00:00Z'
+    Conflict:
+      description: Текущее состояние ресурсов не позволяет выполнить операцию
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/ConflictError' }
+          example:
+            status: 409
+            code: ORGANIZATION_CONFLICT
+            message: Сотрудник не относится к исходной организации либо организации совпадают
+            path: /api/hr/move/15/10/10
+            timestamp: '2026-09-09T12:00:00Z'
+    ValidationError:
+      description: Данные нарушают ограничения целостности модели
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/ValidationError' }
+          example:
+            status: 422
+            code: VALIDATION_ERROR
+            message: Данные работника нарушают ограничения целостности
+            path: /api/workers
+            timestamp: '2026-09-09T12:00:00Z'
+            violations:
+              - field: salary
+                message: должно быть больше 0
+    InternalError:
+      description: Внутренняя ошибка сервиса
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/InternalServerError' }
+          example:
+            status: 500
+            code: INTERNAL_SERVER_ERROR
+            message: При обработке запроса произошла внутренняя ошибка
+            path: /api/workers
+            timestamp: '2026-09-09T12:00:00Z'
+    UpstreamError:
+      description: HR-сервис не получил корректный ответ от Worker-сервиса
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/UpstreamServiceError' }
+          example:
+            status: 502
+            code: WORKER_SERVICE_UNAVAILABLE
+            message: Worker-сервис недоступен или вернул некорректный ответ
+            path: /api/hr/index/all/10/1.1
+            timestamp: '2026-09-09T12:00:00Z'
+    NotAcceptable:
+      description: Сервис не может вернуть представление в формате из заголовка Accept
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/NotAcceptableError' }
+          example:
+            status: 406
+            code: NOT_ACCEPTABLE
+            message: Поддерживается только формат application/xml
+            path: /api/workers
+            timestamp: '2026-09-09T12:00:00Z'
+    UnsupportedMediaType:
+      description: Требуется Content-Type application/xml
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/UnsupportedMediaTypeError' }
+          example:
+            status: 415
+            code: UNSUPPORTED_MEDIA_TYPE
+            message: Поддерживается только Content-Type application/xml
+            path: /api/workers
+            timestamp: '2026-09-09T12:00:00Z'
+    ServiceUnavailable:
+      description: Сервис временно недоступен, повторите запрос позднее
+      headers:
+        Retry-After:
+          description: Рекомендуемая задержка перед повторным запросом в секундах
+          schema: { type: integer, minimum: 1, example: 30 }
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/ServiceUnavailableError' }
+          example:
+            status: 503
+            code: SERVICE_UNAVAILABLE
+            message: Сервис временно недоступен
+            path: /api/workers
+            timestamp: '2026-09-09T12:00:00Z'
+    UnexpectedError:
+      description: Непредвиденный HTTP-ответ, не описанный отдельным кодом
+      content:
+        application/xml:
+          schema: { $ref: '#/components/schemas/UnexpectedError' }
+          example:
+            status: 520
+            code: UNEXPECTED_ERROR
+            message: Получен непредвиденный ответ сервиса
+            path: /api/workers
+            timestamp: '2026-09-09T12:00:00Z'

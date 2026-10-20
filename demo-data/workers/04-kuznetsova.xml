@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Мария Кузнецова</name>
+  <coordinates><x>30</x><y>-100</y></coordinates>
+  <salary>65000</salary>
+  <startDate>2025-09-01</startDate>
+  <position>COOK</position>
+  <status>HIRED</status>
+  <organizationId>10</organizationId>
+</worker>

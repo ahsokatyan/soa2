@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<worker>
+  <name>Иван Иванов</name>
+  <coordinates><x>10</x><y>20</y></coordinates>
+  <salary>180000</salary>
+  <startDate>2022-03-14</startDate>
+  <position>DIRECTOR</position>
+  <status>REGULAR</status>
+  <person><height>182</height><eyeColor>BROWN</eyeColor></person>
+  <organizationId>10</organizationId>
+</worker>
