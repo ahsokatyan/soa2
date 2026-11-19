@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import ru.itmo.soa.common.Settings;
 
@@ -14,8 +13,11 @@ public class ClientConfig {
     @GetMapping(value={"/docs/openapi.yaml","/docs/internal-api.yaml"},produces="application/yaml;charset=UTF-8")
     public ResponseEntity<byte[]> openapi(HttpServletRequest request) throws Exception {
         String file=request.getRequestURI().endsWith("/internal-api.yaml") ? "internal-api.yaml" : "openapi.yaml";
-        String publicWorker=Settings.get("PUBLIC_WORKER_URL","https://localhost:8443/workers/api");
-        String publicHr=Settings.get("PUBLIC_HR_URL",new URI(request.getScheme(),null,request.getServerName(),request.getServerPort(),request.getContextPath() + "/api",null,null).toString());
+        // Relative URLs keep Swagger requests on the browser's host and port, including SSH tunnels.
+        String publicWorker=file.equals("internal-api.yaml")
+            ? Settings.get("PUBLIC_WORKER_URL","https://localhost:8443/workers/api")
+            : request.getContextPath() + "/api";
+        String publicHr=request.getContextPath() + "/api";
         try(var input=request.getServletContext().getResourceAsStream("/docs/" + file)) {
             String yaml=new String(input.readAllBytes(),StandardCharsets.UTF_8)
                 .replace("https://localhost:8443/workers/api",publicWorker)
@@ -31,8 +33,8 @@ public class ClientConfig {
         }
     }
     @GetMapping(value="/client-config.js",produces="application/javascript")
-    public ResponseEntity<String> config() throws Exception {
-        var values=Map.of("workerBase",Settings.get("PUBLIC_WORKER_URL","https://localhost:8443/workers/api"),"hrBase","/api");
+    public ResponseEntity<String> config(HttpServletRequest request) throws Exception {
+        var values=Map.of("workerBase",request.getContextPath() + "/api","hrBase",request.getContextPath() + "/api");
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body("window.SOA_CONFIG = " + new ObjectMapper().writeValueAsString(values) + ";");
     }
 }

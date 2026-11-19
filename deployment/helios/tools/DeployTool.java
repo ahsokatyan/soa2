@@ -246,9 +246,8 @@ public final class DeployTool {
             request("GET",workerBase()+"/workers/"+id,null,404,"error");
             request("POST",workerBase()+"/workers",payload.replace("<salary>100</salary>","<salary>0</salary>"),422,"error");
             String spec=request("GET",clientBase()+"/docs/openapi.yaml",null,200,null);
-            String publicWorker=System.getenv().getOrDefault("SOA_PUBLIC_WORKER_URL",workerBase());
-            String publicHr=System.getenv().getOrDefault("SOA_PUBLIC_HR_URL",clientBase()+"/api");
-            if(!spec.contains(publicWorker) || !spec.contains(publicHr)) throw new IOException("Swagger server URLs do not match deployment");
+            if(!spec.contains("url: /api") || spec.contains("url: https://")) throw new IOException("Swagger must use the same-origin /api gateway");
+            request("GET",clientBase()+"/api/workers?page=1&size=2",null,200,"workerPage");
             System.out.println("PASS: "+passed+"/10 public operations; XML errors 404/422; Swagger deployment URLs; TLS trust and hostnames verified.");
             System.out.println("Known page int32 limit remains unchanged by agreement.");
         } finally {
