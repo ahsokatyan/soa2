@@ -144,5 +144,4 @@ $('#index-form').addEventListener('submit',handle(async event => {
   const data=new FormData(event.target); const result=await api(config.hrBase,`/hr/index/all/${encodeURIComponent(data.get('org'))}/${encodeURIComponent(data.get('coeff'))}`,'POST');
   notify(`Индексация организации ${textAt(result,'organizationId')} завершена. Обновлено работников: ${textAt(result,'updatedWorkers')}`); await load();
 }));
-$('#worker-certificate').href=config.workerBase + '/workers'; $('#connection-info').textContent='Worker API: ' + config.workerBase + ' · HR API: ' + location.origin + config.hrBase + '/hr';
 handle(load)();
